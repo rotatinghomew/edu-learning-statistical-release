@@ -4,8 +4,30 @@
 
 ## 环境与使用
 
-需要 Python 3.11 或更高版本，无第三方依赖。运行 `python3 -m unittest discover -s tests -v` 执行测试；运行 `python3 -m learning_statistical_release.report` 查看合成数据摘要。所有记录均为本地合成数据，不包含个人信息。
+需要 Python 3.11 或更高版本，无第三方依赖。运行 `python3 -m unittest discover -s tests -v` 执行测试；运行 `python3 -m learning_statistical_release.report` 查看合成数据摘要与披露判断演示。所有记录均为本地合成数据，不包含个人信息。
 也可使用 Docker 运行：`docker build -t learning-statistical-release .`，再执行 `docker run --rm learning-statistical-release`。容器内运行测试可执行 `docker run --rm --entrypoint python3 learning-statistical-release -m unittest discover -s tests -v`。
+
+## 统计口径
+
+- **人数**：报名记录条数；一名学员选多门课程会重复计入各课程人数。
+- **去重学员数**：按学员编号去重；跨课程不可相加（同一人可出现在多门课程中），跨课程合计必须回到记录重新去重。
+- **平均出勤率**：报名记录出勤率的均值；均值不是计数，不能相加。可加的只有人数与出勤总和。
+
+## 披露约定与跨查询判断
+
+- 公开约定：人数或去重学员数低于最小可公开人数（`disclosure.MIN_PUBLISHABLE_COUNT = 3`）的单元不予公开；受保护单元输出为“不予公开”占位，绝不输出 0。
+- 每次交付按**接收范围**记入台账：已公开结果转化为基础单元（期次 × 街道 × 课程）上人数与出勤总和的线性方程。新请求逐行判断——若某行与已公开结果合并后能唯一确定受保护单元，则该行保留为空缺；整单无法安全交付时给出可解释的拒绝。
+- 同一数据版次内，已发出的确定数值不回写、不悄悄修改；重复查询得到一致结果。新版次需新建 `ReleaseService`，旧版次承诺不跨版次沿用。
+- 订阅在**运行时**重新判断接收范围：预览（`preview`/`subscribe`）不记账，交付以 `run_subscriptions` 时的台账为准，可能得到降级（部分公开）或拒绝的结果。
+- 审计：业务人员（`staff`）可查精确内部统计、全部交付记录与拒绝原因；收件人（`recipient`）只能查自己接收范围内的交付记录。
+
+## 模块
+
+- `records.py`：读取观测记录与本地合成学员报名记录（`data/learners.csv`，合成数据）。
+- `metrics.py`：三种指标的分组聚合，输出覆盖基础单元的边际。
+- `disclosure.py`：精确有理数行空间与跨查询披露判断。
+- `service.py`：查询、订阅、交付台账与审计接口。
+- `analysis.py` / `operations.py` / `storage.py`：原有观测摘要流程（单表检查沿用同一保护下限）。
 
 ## 现有行为
 
